@@ -1,0 +1,98 @@
+#!/bin/bash
+#
+# Name: didlog
+#
+# Purpose: Record a one-line description of what has been done into a log file
+#
+# Arguments: event to be recorded, optional time, optional date
+#
+# Author: Ed Drouillard on March 19, 1994
+#
+##########################################################################
+#
+# Arguments:
+#	if none specified, shows recent entries in the file
+#   if only "-e" is specified, edits the log file using $EDITOR if set, vi otherwise
+#   if only "-l" is specified, shows the name of the log file
+# 
+# Variables:
+#
+# event: event, which must be in quotes, to be recorded in the file
+# time: time to be recorded in the file, in the form HH:MM
+#	current time is used if not specified
+# date: date to be recorded in the file, in the form YY/MM/DD
+#	current date is used if not specified
+#	if "y" is specified, then yesterday's date is used
+#
+# set -xv
+
+DIDLOGFILE=.perslog # the default name of the logfile which will have the year appended
+
+# Use the logfile for the logged in user, even if switched to root
+u=${USER}
+if  [[ ! -z "${SUDO_USER}" ]] 
+then
+	u=${SUDO_USER}
+fi
+
+EDITOR=${EDITOR:-$(eval which vi)} # set default EDITOR to be vi if it's not set to something else
+
+event=$1 # save the event to be recorded, must be quoted
+time=$2  # save time if provided
+date=$3  # save date if provided
+# echo $date $time 
+
+YEAR=${YEAR:-$(eval date "+%Y")} # get the year so we can have a log file for each year
+BASENAME=~${u}/${DIDLOGFILE}-
+PERSLOG=~${u}/${DIDLOGFILE}-${YEAR}
+
+
+set `date "+%y/%m/%d %H:%M"` # assign values to $1 (date), $2 (time) 
+# echo $1 $2
+
+if [[ "x$event" == "x" ]] # display last few lines of .perslog if no event given
+then
+	if [[ $(eval wc -l "${PERSLOG}" | awk '{print $1}') -lt 10 ]] # if we're at the beginning of the year, print a few lines from last year
+	then
+		eval cat ${BASENAME}$((YEAR-1)) ${PERSLOG} | tail # display the last few lines of last year's and this year's files
+	else
+		eval tail ${PERSLOG} # display the last few lines of our current .perslog if no event given
+	fi
+	exit
+fi
+
+if [[ "x$event" == "x-e" ]]
+then
+	eval ${EDITOR} ${PERSLOG} # edit the logfile if -e is passed as the event
+	exit
+fi
+
+if [[ "x$event" == "x-l" ]] # just show the name of the logfile if -l is the event
+then
+	echo "${PERSLOG}"
+	exit
+fi
+
+shopt -s nocasematch; if [[ "x$date" == "xy" ]]  # test for y or Y to use yesterday's date
+then
+	set `date -d yesterday "+%y/%m/%d %H:%M"` # assign values to $1 (yesterday's date), and $2 (time)
+	date=$1
+elif [[ "x$date" == "x" ]]
+then
+	date=$1
+fi
+
+if [[ "x$time" = "x" ]]
+then
+	time=$2
+fi
+# echo $date $time
+
+if [[ ! -f ${PERSLOG} ]]
+then
+	eval touch "${PERSLOG}"
+	eval chmod 600 "${PERSLOG}"
+fi
+eval "cat >> ${PERSLOG} <<eof
+$date $time $event
+eof"
