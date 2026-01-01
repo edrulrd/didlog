@@ -52,11 +52,11 @@ set `date "+%y/%m/%d %H:%M"` # assign values to $1 (date), $2 (time)
 
 if [[ "x$event" == "x" ]] # display last few lines of .perslog if no event given
 then
-	if [[ $(eval wc -l "${PERSLOG}" | awk '{print $1}') -lt 10 ]] # if we're at the beginning of the year, print a few lines from last year
+	if [[ -f "${PERSLOG}" && $(eval wc -l "${PERSLOG}" | awk '{print $1}') -lt 10 ]] # if we're at the beginning of the year, print a few lines from last year
 	then
-		eval cat ${BASENAME}$((YEAR-1)) ${PERSLOG} | tail # display the last few lines of last year's and this year's files
+		eval cat ${BASENAME}$((YEAR-1)) ${PERSLOG} 2>/dev/null | tail # display the last few lines of last year's and this year's files
 	else
-		eval tail ${PERSLOG} # display the last few lines of our current .perslog if no event given
+		eval tail ${PERSLOG} 2>/dev/null # display the last few lines of our current .perslog if no event given, ignoring if file not present
 	fi
 	exit
 fi
